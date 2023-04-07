@@ -7,3 +7,6 @@ class Elemento:
 
     def _mostrar(self):
         print(f"{self.nombre} \n")
+
+    def _lista(self):
+        return [self.numero_atomico, self.simbolo, self.nombre]

@@ -7,6 +7,7 @@ class Maquina:
 
     def _analizar(self, compuesto):
         pines = {}
+        count = {}
         for i in compuesto[1]:
             pin = 1
             col = 1
@@ -17,44 +18,62 @@ class Maquina:
                         pines[i] = [pin, col]
                     col += 1
                 col = 1
+                movimientos.append([self.nombre, compuesto[0], pin])
+                count[pin-1] = 0
                 pin += 1
-                movimientos.append([])
 
-        print(pines)
+        # print(movimientos)
 
+        print(f"Compuesto {pines}")
         for i in compuesto[1]:
             fila = pines[i][0]-1
-            columna = pines[i][1]-1
-            count = {}
-            count[fila] = 0
-            # print(fila)
+            columna = pines[i][1]
             if count[fila] == 0:
-                movimientos[fila].append("mover adelante")
+                movimientos[fila].append("right")
                 count[fila] += 1
 
             for j in self.elementos[fila]:
-                print(j)
-                print(count[fila])
-                print(columna)
-                print(f"fila {fila}")
-                if count[fila] < columna + 1:
-                    movimientos[fila].append("mover adelante")
-                    print("adelante")
-                elif count[fila] > columna + 1:
-                    movimientos[fila].append("mover atras")
-                    print("atras")
-                elif count[fila] == columna + 1:
+                if count[fila] < columna:
+                    movimientos[fila].append("right")
+                    count[fila] += 1
 
-                    for mov in movimientos:
-                        print(len(mov))
-                        if len(mov) >= len(movimientos[fila]) + 1:
-                            if mov[columna] == "Fusionar":
-                                movimientos[fila].append("Esperar")
-                            else:
-                                movimientos[fila].append("Fusionar")
-                        else:
-                            movimientos[fila].append("Fusionar")
+                elif count[fila] > columna:
+                    movimientos[fila].append("left")
+                    count[fila] -= 1
+
+                elif count[fila] == columna:
+                    movimientos[fila].append("Fusion")
+
                     break
+                else:
+                    movimientos[fila].append("Wait")
+                    count[fila] += 1
 
-                count[fila] += 1
-        print(movimientos)
+        # Agregar espera a las fusiones que se estan ejecutando a la vez
+        columnaFusion = 0
+        filaFusion = 0
+        for i in compuesto[1]:
+            contadorColumnas = 0
+            fila = pines[i][0] - 1
+            for j in movimientos[fila]:
+                contadorColumnas += 1
+                if j == "Fusion":
+
+                    if contadorColumnas <= columnaFusion and filaFusion != fila:
+                        # print(f"contador columnas {contadorColumnas}")
+                        # print(f"contador fusion {columnaFusion}")
+                        movimientos[fila].insert(
+                            contadorColumnas - 1, "Wait")
+                    else:
+                        filaFusion = fila
+                        movimientos[fila][contadorColumnas -
+                                          1] = "NewFusion"
+                        columnaFusion = contadorColumnas
+                        break
+
+        longitud_maxima = max(map(len, movimientos))
+
+        nuevos_movimientos = [s + ["Wait"] *
+                              (longitud_maxima - len(s)) for s in movimientos]
+
+        return nuevos_movimientos

@@ -6,12 +6,15 @@ import xml.dom.minidom
 import graphviz as gv
 from Analizador import Analizador
 from NuevoElemento import NuevoElemento
+import os
 
 root = tk.Tk()
 ListaElementos = []
 ListaMaquinas = []
 ListaCompuestos = []
 archivoInput = ""
+compuesto = ["", ""]
+ListaMovimientos = []
 
 root.geometry("700x600")
 
@@ -32,7 +35,7 @@ def cargar_xml():
 
 
 def generar_xml():
-    ListaMovimientos = []
+    global ListaMovimientos
     ListaMejoresMovimientos = []
     count = 0
     moveLength = 0
@@ -123,30 +126,19 @@ def generar_xml():
 elementos_quimicos = []
 
 
-def ordenar_por_num_atomico():
-    pass
-
-
-def agregar_elemento():
-    pass
-
-
 def crear_tabla():
-    # Crear una nueva ventana
+
     tabla_window = tk.Toplevel(root)
     tabla_window.title("Tabla de elementos químicos")
 
-    # Crear un widget Treeview para la tabla
     tabla = ttk.Treeview(tabla_window, columns=(
         "numero_atomico", "simbolo", "nombre"), show="headings")
     tabla.pack()
 
-    # Configurar las columnas
     tabla.heading("numero_atomico", text="Número Atómico")
     tabla.heading("simbolo", text="Símbolo")
     tabla.heading("nombre", text="Nombre")
 
-    # Añadir los datos a la tabla
     for elemento in ListaElementos:
         tabla.insert("", tk.END, values=(elemento.numero_atomico,
                      elemento.simbolo, elemento.nombre))
@@ -198,13 +190,84 @@ def gestionar_compuestos():
         comp_window, text="Lista de Compuestos y sus Fórmulas", font=("Arial", 14))
     label1.pack(pady=10)
 
-    button1 = tk.Button(comp_window, text="Analizar compuesto",
-                        command=analizar_compuesto)
+    button1 = tk.Button(comp_window, text="Listado de compuestos", width=30, height=3,
+                        command=listado_compuestos)
     button1.pack(pady=10)
+    button2 = tk.Button(comp_window, text="Analizar compuesto", width=30, height=3,
+                        command=analizar_compuesto)
+    button2.pack(pady=10)
+
+
+def listado_compuestos():
+    tabla_compuestos = tk.Toplevel(root)
+    tabla_compuestos.title("Tabla de compuestos")
+
+    tabla = ttk.Treeview(tabla_compuestos, columns=(
+        "Nombre", "Elemento"), show="headings")
+    tabla.pack()
+
+    tabla.heading("Nombre", text="Nombre")
+    tabla.heading("Elemento", text="Elemento")
+
+    for c in ListaCompuestos:
+        print(c.nombre)
+        tabla.insert("", tk.END, values=(c.nombre, c.elemento))
 
 
 def analizar_compuesto():
-    pass
+    analizar_c = tk.Toplevel(root)
+    analizar_c.geometry("600x400")
+    analizar_c.title("Analizar compuesto")
+
+    label1 = tk.Label(
+        analizar_c, text="Analizar compuesto", font=("Arial", 14))
+    label1.pack(pady=10)
+
+    button1 = tk.Button(
+        analizar_c, text="Seleccionar un compuesto", width=30, height=3, command=seleccionar_compuesto)
+    button1.pack(pady=10)
+
+    button2 = tk.Button(
+        analizar_c, text="Ver maquinas y tiempos", width=30, height=3, command=maquinas_y_tiempo)
+    button2.pack(pady=10)
+
+    button3 = tk.Button(
+        analizar_c, text="Ver instrucciones graficamente", width=30, height=3, command=agregar_elemento)
+    button3.pack(pady=10)
+
+
+def seleccionar_compuesto():
+    tabla_compuestos = tk.Toplevel(root)
+    tabla_compuestos.title("Tabla de compuestos")
+
+    tabla = ttk.Treeview(tabla_compuestos, columns=(
+        "Nombre", "Elemento"), show="headings")
+    tabla.pack()
+
+    tabla.heading("Nombre", text="Nombre")
+    tabla.heading("Elemento", text="Elemento")
+
+    for c in ListaCompuestos:
+        print(c.nombre)
+        tabla.insert("", tk.END, values=(c.nombre, c.elemento))
+
+    tabla.bind('<ButtonRelease-1>',
+               lambda event: click_elemento(event, tabla, tabla_compuestos))
+
+
+def click_elemento(event, tabla, window):
+
+    global compuesto
+    item = tabla.focus()
+
+    values = tabla.item(item)['values']
+    print(values)
+    compuesto[0] = values[0]
+    compuesto[1] = values[1]
+
+    print(compuesto)
+
+    window.destroy()
 
 
 def gestionar_maquinas():
@@ -216,8 +279,67 @@ def gestionar_maquinas():
     label1.grid(row=0, column=0, columnspan=3, padx=20, pady=20)
 
 
+def maquinas_y_tiempo():
+    global ListaMovimientos
+    global compuesto
+
+    ventana = tk.Toplevel()
+    ventana.title(f"Ver máquinas y tiempo, Compuesto: {compuesto[0]}")
+
+    tabla = ttk.Treeview(ventana, columns=(
+        "nombre", "tiempo_optimo"), show="headings")
+    tabla.pack()
+
+    tabla.heading("nombre", text="Nombre de máquina")
+    tabla.heading("tiempo_optimo", text="Tiempo óptimo")
+
+    for i in ListaMovimientos:
+        for j in i:
+            if j[1] == compuesto[0]:
+                tabla.insert("", tk.END, values=(
+                    j[0], len(j) - 3))
+                break
+
+
+def graficar_maquinas():
+    try:
+
+        archivoDOT = open("grafico.dot", "w")
+        archivoDOT.write("digraph { \n")
+        archivoDOT.write('rankdir = LR \n')
+        archivoDOT.write(
+            'node[shape=record, fontname="Arial Black", fontsize=16] \n')
+
+        for i in listaPeliculas:
+            print(i)
+            archivoDOT.write(
+                i["indice"]+'[label="{' + i["pelicula"] + '}' + '| {' + i["anio"] + '|' + i["genero"] + '}"]\n')
+
+        archivoDOT.write("} \n")
+        archivoDOT.close()
+        os.system("dot.exe -Tpng grafico.dot -o  ReporteGrafico.png")
+    except:
+        print("*********")
+    finally:
+        archivoDOT.close()
+
+
 def ayuda():
-    pass
+    ventana_usuario = tk.Tk()
+    ventana_usuario.title("Temas de ayuda")
+
+    nombre = tk.Label(
+        ventana_usuario, text="Nombre: Cristian Giovanni Estrada Ramirez")
+    carnet = tk.Label(ventana_usuario, text="Carnet: 202006413")
+    gmail = tk.Label(
+        ventana_usuario, text="Correo: 2991897830101@ingenieria.usac.edu.gt")
+    curso = tk.Label(
+        ventana_usuario, text="Introduccion a la Programacion y Computacion 2")
+
+    nombre.pack()
+    carnet.pack()
+    gmail.pack()
+    curso.pack()
 
 
 # button1 = tk.Button(root, text="Inicializar", width=30,
